@@ -59,9 +59,7 @@ def get_music_file_info(file_path):
                 '文件类型': file_type
             }
         except Exception as e:
-            log_message(f"无法读取文件 {file_path}，错误信息：{e}")
-    else:
-        log_message(f"不是音乐文件 {file_path}")
+            log_message("无法读取文件 "+ file_path)
     return {
         '是否音乐': 0
     }
@@ -78,7 +76,6 @@ def auto_sorting(source_dir, output_dir):
                 if os.path.isfile(filepath) and os.access(filepath, os.R_OK):
                     # 读取文件信息
                     info = get_music_file_info(filepath)
-
                     # 是音乐文件则处理
                     if info['是否音乐'] == 1:
                         artistpath = info['歌手目录']
