@@ -1,5 +1,5 @@
 # 基础镜像
-FROM python:3.8-buster
+FROM python:3.5-stretch-slim
 
 # 设置工作目录
 WORKDIR /app
