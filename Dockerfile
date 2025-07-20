@@ -17,8 +17,8 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 第二阶段：运行环境（体积更小）
-FROM python:3.8-alpine
+# 第二阶段：运行环境
+FROM python:3.8-slim-bullseye
 
 # 设置工作目录
 WORKDIR /app
