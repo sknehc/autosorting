@@ -33,7 +33,7 @@ jobs:
             arch=${arch//\//-}
             docker buildx build \
               --platform $platform \
-              --output type=oci,dest=./${{ inputs.image_name }}-${{ inputs.version }}-$arch.tar \
+              --output type=docker,dest=./${{ inputs.image_name }}-${{ inputs.version }}-$arch.tar \
               -t ${{ inputs.image_name }}:${{ inputs.version }} .
           done
 
