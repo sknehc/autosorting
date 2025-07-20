@@ -31,13 +31,14 @@ jobs:
           driver-opts: network=host
 
       # 构建多平台镜像并导出
-      - name: Build with Buildx
+      - name: Build multi-arch image
         uses: docker/build-push-action@v4
         with:
           context: .
           platforms: linux/amd64,linux/arm64,linux/arm/v7
-          outputs: type=docker,dest=./${{ inputs.image_name }}-${{ inputs.version }}.tar
+          outputs: type=oci,dest=./${{ inputs.image_name }}.tar
           tags: ${{ inputs.image_name }}:${{ inputs.version }}
+
 
       # 高压缩率打包
       - name: Compress with maximum ratio
@@ -47,7 +48,7 @@ jobs:
 
       # 创建Release
       - name: Create Release
-        id: Auto-Docker-Build-release
+        id: create_release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ inputs.version }}
