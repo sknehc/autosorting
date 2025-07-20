@@ -1,0 +1,59 @@
+
+name: Multi-arch Docker Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_name:
+        description: 'Docker image name (e.g. myapp)'
+        required: true
+        type: string
+      version:
+        description: 'Release version (e.g. v1.4.1)'
+        required: true
+        type: string
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      # 设置多架构构建环境
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: arm64,arm
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          driver-opts: network=host
+
+      # 构建多平台镜像并导出
+      - name: Build with Buildx
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          outputs: type=docker,dest=./${{ inputs.image_name }}-${{ inputs.version }}.tar
+          tags: ${{ inputs.image_name }}:${{ inputs.version }}
+
+      # 高压缩率打包
+      - name: Compress with maximum ratio
+        run: |
+          gzip -9 ${{ inputs.image_name }}-${{ inputs.version }}.tar
+          ls -lh *.gz
+
+      # 创建Release
+      - name: Create Release
+        id: Auto-Docker-Build-release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ inputs.version }}
+          name: ${{ inputs.image_name }} ${{ inputs.version }}
+          body: "Multi-arch Docker image (amd64/arm64/armv7)"
+          draft: false
+          prerelease: false
+          files: |
+            ${{ inputs.image_name }}-${{ inputs.version }}.tar.gz
