@@ -5,13 +5,11 @@ on:
   workflow_dispatch:
     inputs:
       image_name:
-        description: 'Docker image name (e.g. myapp)'
+        description: 'Docker image name'
         required: true
-        type: string
       version:
-        description: 'Release version (e.g. v1.4.1)'
+        description: 'Release version'
         required: true
-        type: string
 
 jobs:
   build-release:
@@ -19,7 +17,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      # 设置多架构构建环境
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
         with:
@@ -27,34 +24,29 @@ jobs:
 
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v2
-        with:
-          driver-opts: network=host
 
-      # 构建多平台镜像并导出
-      - name: Build multi-arch image
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
-          outputs: type=oci,dest=./${{ inputs.image_name }}.tar
-          tags: ${{ inputs.image_name }}:${{ inputs.version }}
-
-
-      # 高压缩率打包
-      - name: Compress with maximum ratio
+      - name: Build per platform
         run: |
-          gzip -9 ${{ inputs.image_name }}-${{ inputs.version }}.tar
+          platforms=("linux/amd64" "linux/arm64" "linux/arm/v7")
+          for platform in ${platforms[@]}; do
+            arch=${platform#*/}
+            arch=${arch//\//-}
+            docker buildx build \
+              --platform $platform \
+              --output type=oci,dest=./${{ inputs.image_name }}-${{ inputs.version }}-$arch.tar \
+              -t ${{ inputs.image_name }}:${{ inputs.version }} .
+          done
+
+      - name: Compress artifacts
+        run: |
+          for f in *.tar; do
+            gzip -9 $f
+          done
           ls -lh *.gz
 
-      # 创建Release
       - name: Create Release
-        id: create_release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ inputs.version }}
-          name: ${{ inputs.image_name }} ${{ inputs.version }}
-          body: "Multi-arch Docker image (amd64/arm64/armv7)"
-          draft: false
-          prerelease: false
           files: |
-            ${{ inputs.image_name }}-${{ inputs.version }}.tar.gz
+            ${{ inputs.image_name }}-${{ inputs.version }}-*.tar.gz
