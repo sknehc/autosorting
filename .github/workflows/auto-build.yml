@@ -1,0 +1,64 @@
+name: Build Multi-Arch Executable
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch:
+          - armv7
+          - arm64
+          - amd64
+        include:
+          - arch: armv7
+            platform: linux/arm/v7
+            qemu-arch: arm
+          - arch: arm64
+            platform: linux/arm64
+            qemu-arch: aarch64
+          - arch: amd64
+            platform: linux/amd64
+            qemu-arch: x86_64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm,arm64,amd64
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
+
+      - name: Build executable for ${{ matrix.arch }}
+        run: |
+          # 创建架构特定的构建目录
+          mkdir -p build/${{ matrix.arch }}
+          
+          # 使用 Docker 容器进行跨架构编译
+          docker run --rm \
+            -v "$(pwd)":/src \
+            -w /src \
+            --platform ${{ matrix.platform }} \
+            python:3.8-slim \
+            bash -c "
+              pip install pyinstaller &&
+              pip install -r requirements.txt &&  # 安装 requirements.txt 中的依赖
+              pyinstaller --onefile --distpath /src/dist/${{ matrix.arch }} autosorting.py
+            "
+          
+          # 验证生成的可执行文件
+          file dist/${{ matrix.arch }}/autosorting
+
+      - name: Upload artifact for ${{ matrix.arch }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: executable-${{ matrix.arch }}
+          path: dist/${{ matrix.arch }}/autosorting    
